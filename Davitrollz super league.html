@@ -1,139 +1,16 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-
-// Configurações iniciais
-const gravity = 0.5;
-let isJumping = false;
-let playerSpeed = 5;
-let jumpPower = 10;
-let gojoX = 100;
-let gojoY = canvas.height - 100;
-let gojoVelY = 0;
-let abilities = [];
-let enemies = [];
-
-// Habilidades Aleatórias
-const allAbilities = ['Infinity', 'Red', 'Blue', 'Limitless', 'Domain Expansion']; // Exemplo de habilidades
-let assignedAbilities = [];
-
-// Função para iniciar habilidades aleatórias
-function assignRandomAbilities() {
-    assignedAbilities = [];
-    while (assignedAbilities.length < 5) {
-        const randomAbility = allAbilities[Math.floor(Math.random() * allAbilities.length)];
-        if (!assignedAbilities.includes(randomAbility)) {
-            assignedAbilities.push(randomAbility);
-        }
-    }
-}
-
-// Jogador (Gojo)
-const player = {
-    x: gojoX,
-    y: gojoY,
-    width: 50,
-    height: 100,
-    color: '#00f',
-    velocityY: 0,
-    speed: playerSpeed,
-};
-
-// Função para desenhar o Gojo
-function drawPlayer() {
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.width, player.height);
-}
-
-// Movimentação do Gojo
-function movePlayer() {
-    if (keys['ArrowLeft']) player.x -= player.speed;
-    if (keys['ArrowRight']) player.x += player.speed;
-
-    // Pulo
-    if (keys['Space'] && !isJumping) {
-        player.velocityY = -jumpPower;
-        isJumping = true;
-    }
-    player.y += player.velocityY;
-    player.velocityY += gravity;
-
-    // Impede o jogador de cair para fora da tela
-    if (player.y > canvas.height - player.height) {
-        player.y = canvas.height - player.height;
-        isJumping = false;
-        player.velocityY = 0;
-    }
-}
-
-// Controle de teclas
-let keys = {};
-document.addEventListener('keydown', (event) => {
-    keys[event.key] = true;
-});
-document.addEventListener('keyup', (event) => {
-    keys[event.key] = false;
-});
-
-// Inimigos - Classe Básica
-class Enemy {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.width = 50;
-        this.height = 50;
-        this.color = '#f00';
-        this.velocityX = 2;
-    }
-
-    move() {
-        this.x -= this.velocityX;
-    }
-
-    draw() {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-    }
-}
-
-// Função para gerar inimigos
-function generateEnemies() {
-    if (Math.random() < 0.02) {
-        const enemyY = Math.random() * (canvas.height - 100);
-        enemies.push(new Enemy(canvas.width, enemyY));
-    }
-}
-
-// Função para atualizar os inimigos
-function updateEnemies() {
-    for (let i = 0; i < enemies.length; i++) {
-        enemies[i].move();
-        enemies[i].draw();
-    }
-}
-
-// Geração de fases simples (plataformas)
-function drawPlatforms() {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50); // Plataforma do chão
-}
-
-// Função de jogo principal
-function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpa a tela
-    drawPlatforms();
-    movePlayer();
-    drawPlayer();
-    updateEnemies();
-    generateEnemies();
-
-    // Se quiser mostrar habilidades aleatórias no jogo
-    ctx.fillStyle = '#000';
-    ctx.font = '20px Arial';
-    ctx.fillText('Habilidades: ' + assignedAbilities.join(', '), 10, 30);
-
-    requestAnimationFrame(gameLoop); // Chamando a função de forma recursiva
-}
-
-// Iniciar o jogo
-assignRandomAbilities(); // Atribuindo habilidades aleatórias
-gameLoop(); // Começar o loop do jogo
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gojo 2D Game</title>
+    <style>
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script src="game.js"></script>
+</body>
+</html>
