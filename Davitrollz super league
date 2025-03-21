@@ -1,263 +1,150 @@
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jujutsu Kaisen 2D - Gojo</title>
+    <style>
+        body { text-align: center; background: black; color: white; }
+        canvas { background: #222; display: block; margin: auto; }
+        #devPanel { display: none; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Jujutsu Kaisen 2D - Gojo</h1>
+    <canvas id="gameCanvas"></canvas>
+    <div id="devPanel">
+        <button onclick="nextLevel()">Pular Fase</button>
+    </div>
 
-local transparencyValue = 0.5
-local increment = 0.1
-local expandedRadius = 20 -- Aumente esse valor para expandir o alcance
-local hitboxPart = nil
-local isScriptActive = false -- Variável para controlar se o script está ativado ou desativado
-local dragActive = false -- Controla se o ponto azul está sendo segurado para mover o script
-local guiOffset = Vector2.new(0, 0) -- Para rastrear a posição da interface
+    <script>
+        // Configurações do jogo
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 800;
+        canvas.height = 400;
 
-local function sendNotification(title, text)
-    game.StarterGui:SetCore("SendNotification", {
-        Title = title,
-        Text = text,
-        Duration = 3
-    })
-end
+        let player = { x: 50, y: 200, size: 50, speed: 5, color: 'blue' };
+        let enemies = [];
+        let level = 1;
+        let gameRunning = true;
+        let devMode = false;
+        let abilities = {
+            limitless: { cooldown: 5000, lastUsed: 0 },
+            blue: { cooldown: 10000, lastUsed: 0 },
+            red: { cooldown: 10000, lastUsed: 0 },
+            purple: { cooldown: 15000, lastUsed: 0 },
+            void: { cooldown: 20000, lastUsed: 0 },
+        };
+        let cursedTechnique = '';
 
-local function updateTransparency()
-    for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-        if part:IsA("Part") and part.Name:match("_Expanded") then
-            part.Transparency = transparencyValue
-        end
-    end
-end
+        // Movimentação do jogador
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp" && player.y > 0) player.y -= player.speed;
+            if (e.key === "ArrowDown" && player.y < canvas.height - player.size) player.y += player.speed;
 
-local function increaseTransparency()
-    if transparencyValue < 1 then
-        transparencyValue = math.min(transparencyValue + increment, 1)
-        updateTransparency()
-        sendNotification("Transparência Atualizada", "Aumentada para: " .. transparencyValue)
-    else
-        sendNotification("Transparência Máxima", "Não pode aumentar mais.")
-    end
-end
+            if (e.key === "q") useAbility("limitless");
+            if (e.key === "w") useAbility("blue");
+            if (e.key === "e") useAbility("red");
+            if (e.key === "r") useAbility("purple");
+            if (e.key === "t") useAbility("void");
+        });
 
-local function decreaseTransparency()
-    if transparencyValue > 0 then
-        transparencyValue = math.max(transparencyValue - increment, 0)
-        updateTransparency()
-        sendNotification("Transparência Atualizada", "Diminuída para: " .. transparencyValue)
-    else
-        sendNotification("Transparência Mínima", "Não pode diminuir mais.")
-    end
-end
+        // Geração de inimigos
+        function generateEnemies() {
+            enemies.push({ x: canvas.width, y: Math.random() * (canvas.height - 30), size: 30, speed: level });
+        }
 
-UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.M then
-        increaseTransparency()
-    elseif input.KeyCode == Enum.KeyCode.N then
-        decreaseTransparency()
-    end
-end)
+        setInterval(() => {
+            if (gameRunning) generateEnemies();
+        }, 1000);
 
--- Expandir a hitbox de interação sem expandir o personagem
-local function expandInteractionArea()
-    local character = LocalPlayer.Character
-    if character then
-        -- Criar uma hitbox de interação expandida, sem afetar o tamanho do personagem
-        if hitboxPart then
-            hitboxPart:Destroy()
-        end
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if humanoidRootPart then
-            hitboxPart = Instance.new("Part")
-            hitboxPart.Size = Vector3.new(expandedRadius * 2, 1, expandedRadius * 2) -- Aumenta o tamanho da hitbox
-            hitboxPart.Position = humanoidRootPart.Position
-            hitboxPart.Anchored = true
-            hitboxPart.CanCollide = false
-            hitboxPart.Transparency = 0.5
-            hitboxPart.Parent = game.Workspace
-        end
-    end
-end
+        // Usar habilidade
+        function useAbility(ability) {
+            const now = Date.now();
+            if (now - abilities[ability].lastUsed < abilities[ability].cooldown) {
+                return;  // Se a habilidade estiver em cooldown
+            }
+            abilities[ability].lastUsed = now;
 
-local function createAndStabilizePart(part, size, name, transparency)
-    local existingClone = part.Parent:FindFirstChild(name)
-    if existingClone then
-        existingClone:Destroy()
-    end
+            cursedTechnique = ability;  // Guarda qual habilidade foi usada
+            console.log(`Habilidade usada: ${ability}`);
+        }
 
-    local clone = Instance.new("Part")
-    clone.Size = size
-    clone.CanCollide = false
-    clone.Transparency = transparency
-    clone.Name = name
-    clone.Position = part.Position
-    clone.Anchored = false
-    clone.Parent = part.Parent
+        // Atualização do jogo
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    local originalAttachment = Instance.new("Attachment")
-    originalAttachment.Name = "OriginalAttachment"
-    originalAttachment.Parent = part
+            // Desenhar jogador (Gojo)
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.size, player.size);
 
-    local cloneAttachment = Instance.new("Attachment")
-    cloneAttachment.Name = "CloneAttachment"
-    cloneAttachment.Parent = clone
+            // Atualizar inimigos
+            ctx.fillStyle = "red";
+            enemies.forEach((enemy, index) => {
+                enemy.x -= enemy.speed;
+                ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
 
-    local alignPosition = Instance.new("AlignPosition")
-    alignPosition.Attachment0 = cloneAttachment
-    alignPosition.Attachment1 = originalAttachment
-    alignPosition.RigidityEnabled = true
-    alignPosition.Parent = clone
+                // Colisão
+                if (enemy.x < player.x + player.size && enemy.x + enemy.size > player.x &&
+                    enemy.y < player.y + player.size && enemy.y + enemy.size > player.y) {
+                    alert("Game Over! Você chegou até a fase " + level);
+                    gameRunning = false;
+                }
 
-    local alignOrientation = Instance.new("AlignOrientation")
-    alignOrientation.Attachment0 = cloneAttachment
-    alignOrientation.Attachment1 = originalAttachment
-    alignOrientation.RigidityEnabled = true
-    alignOrientation.Parent = clone
+                // Remover inimigos fora da tela
+                if (enemy.x < -enemy.size) enemies.splice(index, 1);
 
-    return clone
-end
+                // Aplicar habilidades de Gojo nos inimigos
+                if (cursedTechnique === "limitless") {
+                    enemy.speed = Math.max(0.5, enemy.speed - 0.1);  // Inimigos desaceleram
+                }
+                if (cursedTechnique === "blue") {
+                    // Atração (simplificada)
+                    enemy.x += 2;
+                }
+                if (cursedTechnique === "red") {
+                    // Empurrar os inimigos para trás
+                    enemy.x -= 4;
+                }
+                if (cursedTechnique === "purple") {
+                    // Dano (destruição simples)
+                    enemies = [];
+                }
+                if (cursedTechnique === "void") {
+                    // Diminui a velocidade dos inimigos
+                    enemy.speed *= 0.5;
+                }
+            });
 
-local function expandParts()
-    local character = LocalPlayer.Character
-    if character then
-        -- Expandindo as partes do corpo visualmente (sem aumentar o alcance do personagem)
-        local lowerTorso = character:FindFirstChild("LowerTorso")
-        local upperTorso = character:FindFirstChild("UpperTorso")
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        local leftArm = character:FindFirstChild("Left Arm")
-        local rightArm = character:FindFirstChild("Right Arm")
-        local leftLeg = character:FindFirstChild("Left Leg")
-        local rightLeg = character:FindFirstChild("Right Leg")
-        local leftHand = character:FindFirstChild("LeftHand")
-        local rightHand = character:FindFirstChild("RightHand")
-        local leftFoot = character:FindFirstChild("LeftFoot")
-        local rightFoot = character:FindFirstChild("RightFoot")
+            if (gameRunning) requestAnimationFrame(update);
+        }
 
-        -- Expansão visual das partes do corpo
-        if lowerTorso then
-            createAndStabilizePart(lowerTorso, Vector3.new(12, 12, 12), "LowerTorso_Expanded", 0.8)
-        end
+        update();
 
-        if upperTorso then
-            createAndStabilizePart(upperTorso, Vector3.new(12, 12, 12), "UpperTorso_Expanded", 0.8)
-        end
+        // Mudar de fase
+        function nextLevel() {
+            level++;
+            enemies = [];
+            alert("Fase " + level);
+        }
 
-        if humanoidRootPart then
-            createAndStabilizePart(humanoidRootPart, Vector3.new(12, 12, 12), "HumanoidRootPart_Expanded", 0.8)
-        end
+        // Sistema de desenvolvedor
+        function enterDevMode() {
+            let password = prompt("Digite a senha de desenvolvedor:");
+            if (password === "ADM999") {
+                devMode = true;
+                document.getElementById("devPanel").style.display = "block";
+                alert("Modo Desenvolvedor Ativado!");
+            } else {
+                alert("Senha incorreta!");
+            }
+        }
 
-        if leftArm then
-            createAndStabilizePart(leftArm, Vector3.new(12, 12, 12), "LeftArm_Expanded", 0.8)
-        end
-
-        if rightArm then
-            createAndStabilizePart(rightArm, Vector3.new(12, 12, 12), "RightArm_Expanded", 0.8)
-        end
-
-        if leftLeg then
-            createAndStabilizePart(leftLeg, Vector3.new(12, 12, 12), "LeftLeg_Expanded", 0.8)
-        end
-
-        if rightLeg then
-            createAndStabilizePart(rightLeg, Vector3.new(12, 12, 12), "RightLeg_Expanded", 0.8)
-        end
-
-        if leftHand then
-            createAndStabilizePart(leftHand, Vector3.new(12, 12, 12), "LeftHand_Expanded", 0.8)
-        end
-
-        if rightHand then
-            createAndStabilizePart(rightHand, Vector3.new(12, 12, 12), "RightHand_Expanded", 0.8)
-        end
-
-        if leftFoot then
-            createAndStabilizePart(leftFoot, Vector3.new(12, 12, 12), "LeftFoot_Expanded", 0.8)
-        end
-
-        if rightFoot then
-            createAndStabilizePart(rightFoot, Vector3.new(12, 12, 12), "RightFoot_Expanded", 0.8)
-        end
-    end
-end
-
-local function createCustomGUI()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ExpandPartsGui"
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 250, 0, 70)
-    frame.Position = UDim2.new(0, guiOffset.X, 0, guiOffset.Y)
-    frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    frame.BorderSizePixel = 0
-    frame.BackgroundTransparency = 0.2
-    frame.Parent = screenGui
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.Position = UDim2.new(0, 0, 0, 0)
-    title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    title.BorderSizePixel = 0
-    title.Text = "Expansor de Partes"
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    title.Font = Enum.Font.Gotham
-    title.TextSize = 14
-    title.Parent = frame
-
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 150, 0, 40)
-    button.Position = UDim2.new(0, 0, 0, 30)
-    button.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Botão vermelho
-    button.BorderSizePixel = 0
-    button.Text = "Ativar Script"
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.Gotham
-    button.TextSize = 16
-    button.Parent = frame
-
-    local statusText = Instance.new("TextLabel")
-    statusText.Size = UDim2.new(0, 100, 0, 40)
-    statusText.Position = UDim2.new(0, 160, 0, 30)
-    statusText.Text = "Ativado"
-    statusText.TextColor3 = Color3.fromRGB(0, 255, 0)
-    statusText.Font = Enum.Font.Gotham
-    statusText.TextSize = 16
-    statusText.Parent = frame
-
-    local dragPoint = Instance.new("Frame")
-    dragPoint.Size = UDim2.new(0, 30, 0, 30) -- Aumentando o ponto azul
-    dragPoint.Position = UDim2.new(1, -40, 0, -15)
-    dragPoint.BackgroundColor3 = Color3.fromRGB(0, 0, 255) -- Ponto azul
-    dragPoint.BorderSizePixel = 0
-    dragPoint.Parent = frame
-
-    local function activateScript()
-        isScriptActive = true
-        button.Text = "Script Ativado"
-        statusText.Text = "Ativado"
-        statusText.TextColor3 = Color3.fromRGB(0, 255, 0)
-        expandParts()
-        expandInteractionArea()
-    end
-
-    button.MouseButton1Click:Connect(activateScript)
-
-    -- Função para mover o GUI
-    dragPoint.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragActive = true
-            local mouse = UserInputService:GetMouseLocation() - guiOffset
-            local startPos = guiOffset
-            UserInputService.InputChanged:Connect(function(inputChange)
-                if dragActive then
-                    guiOffset = inputChange.Position - mouse
-                    frame.Position = UDim2.new(0, guiOffset.X, 0, guiOffset.Y)
-                end
-            end)
-        end
-    end)
-
-    dragPoint.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragActive = false
-        end
-    end)
-end
-
-createCustomGUI() -- Chama a função para criar a GUI
+        // Ativar desenvolvedor ao pressionar D
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "d") enterDevMode();
+        });
+    </script>
+</body>
+</html>
