@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jujutsu Kaisen 2D - Gojo</title>
+    <style>
+        body { text-align: center; background: black; color: white; }
+        canvas { background: #222; display: block; margin: auto; }
+        #devPanel { display: none; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Jujutsu Kaisen 2D - Gojo</h1>
+    <canvas id="gameCanvas"></canvas>
+    <div id="devPanel">
+        <button onclick="nextLevel()">Pular Fase</button>
+    </div>
+
+    <script>
+        // Configurações do jogo
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 800;
+        canvas.height = 400;
+
+        let player = { x: 50, y: 200, size: 30, speed: 5, color: 'blue' };
+        let enemies = [];
+        let level = 1;
+        let gameRunning = true;
+        let devMode = false;
+        let abilities = {
+            limitless: { cooldown: 5000, lastUsed: 0 },
+            blue: { cooldown: 10000, lastUsed: 0 },
+            red: { cooldown: 10000, lastUsed: 0 },
+            purple: { cooldown: 15000, lastUsed: 0 },
+            void: { cooldown: 20000, lastUsed: 0 },
+        };
+        let cursedTechnique = '';
+
+        // Movimentação do jogador
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp" && player.y > 0) player.y -= player.speed;
+            if (e.key === "ArrowDown" && player.y < canvas.height - player.size) player.y += player.speed;
+
+            if (e.key === "q") useAbility("limitless");
+            if (e.key === "w") useAbility("blue");
+            if (e.key === "e") useAbility("red");
+            if (e.key === "r") useAbility("purple");
+            if (e.key === "t") useAbility("void");
+        });
+
+        // Geração de inimigos
+        function generateEnemies() {
+            enemies.push({ x: canvas.width, y: Math.random() * (canvas.height - 30), size: 30, speed: level });
+        }
+
+        setInterval(() => {
+            if (gameRunning) generateEnemies();
+        }, 1000);
+
+        // Usar habilidade
+        function useAbility(ability) {
+            const now = Date.now();
+            if (now - abilities[ability].lastUsed < abilities[ability].cooldown) {
+                return;  // Se a habilidade estiver em cooldown
+            }
+            abilities[ability].lastUsed = now;
+
+            cursedTechnique = ability;  // Guarda qual habilidade foi usada
+            console.log(`Habilidade usada: ${ability}`);
+        }
+
+        // Atualização do jogo
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Desenhar jogador (Gojo)
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+
+            // Atualizar inimigos
+            ctx.fillStyle = "red";
+            enemies.forEach((enemy, index) => {
+                enemy.x -= enemy.speed;
+                ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
+
+                // Colisão
+                if (enemy.x < player.x + player.size && enemy.x + enemy.size > player.x &&
+                    enemy.y < player.y + player.size && enemy.y + enemy.size > player.y) {
+                    alert("Game Over! Você chegou até a fase " + level);
+                    gameRunning = false;
+                }
+
+                // Remover inimigos fora da tela
+                if (enemy.x < -enemy.size) enemies.splice(index, 1);
+
+                // Aplicar habilidades de Gojo nos inimigos
+                if (cursedTechnique === "limitless") {
+                    enemy.speed = Math.max(0.5, enemy.speed - 0.1);  // Inimigos desaceleram
+                }
+                if (cursedTechnique === "blue") {
+                    // Atração (simplificada)
+                    enemy.x += 2;
+                }
+                if (cursedTechnique === "red") {
+                    // Empurrar os inimigos para trás
+                    enemy.x -= 4;
+                }
+                if (cursedTechnique === "purple") {
+                    // Dano (destruição simples)
+                    enemies = [];
+                }
+                if (cursedTechnique === "void") {
+                    // Diminui a velocidade dos inimigos
+                    enemy.speed *= 0.5;
+                }
+            });
+
+            if (gameRunning) requestAnimationFrame(update);
+        }
+
+        update();
+
+        // Mudar de fase
+        function nextLevel() {
+            level++;
+            enemies = [];
+            alert("Fase " + level);
+        }
+
+        // Sistema de desenvolvedor
+        function enterDevMode() {
+            let password = prompt("Digite a senha de desenvolvedor:");
+            if (password === "ADM999") {
+                devMode = true;
+                document.getElementById("devPanel").style.display = "block";
+                alert("Modo Desenvolvedor Ativado!");
+            } else {
+                alert("Senha incorreta!");
+            }
+        }
+
+        // Ativar desenvolvedor ao pressionar D
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "d") enterDevMode();
+        });
+    </script>
+</body>
+</html>
