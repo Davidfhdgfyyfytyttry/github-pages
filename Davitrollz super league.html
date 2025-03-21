@@ -1,150 +1,139 @@
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jujutsu Kaisen 2D - Gojo</title>
-    <style>
-        body { text-align: center; background: black; color: white; }
-        canvas { background: #222; display: block; margin: auto; }
-        #devPanel { display: none; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <h1>Jujutsu Kaisen 2D - Gojo</h1>
-    <canvas id="gameCanvas"></canvas>
-    <div id="devPanel">
-        <button onclick="nextLevel()">Pular Fase</button>
-    </div>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-    <script>
-        // Configurações do jogo
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = 800;
-        canvas.height = 400;
+// Configurações iniciais
+const gravity = 0.5;
+let isJumping = false;
+let playerSpeed = 5;
+let jumpPower = 10;
+let gojoX = 100;
+let gojoY = canvas.height - 100;
+let gojoVelY = 0;
+let abilities = [];
+let enemies = [];
 
-        let player = { x: 50, y: 200, size: 50, speed: 5, color: 'blue' };
-        let enemies = [];
-        let level = 1;
-        let gameRunning = true;
-        let devMode = false;
-        let abilities = {
-            limitless: { cooldown: 5000, lastUsed: 0 },
-            blue: { cooldown: 10000, lastUsed: 0 },
-            red: { cooldown: 10000, lastUsed: 0 },
-            purple: { cooldown: 15000, lastUsed: 0 },
-            void: { cooldown: 20000, lastUsed: 0 },
-        };
-        let cursedTechnique = '';
+// Habilidades Aleatórias
+const allAbilities = ['Infinity', 'Red', 'Blue', 'Limitless', 'Domain Expansion']; // Exemplo de habilidades
+let assignedAbilities = [];
 
-        // Movimentação do jogador
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "ArrowUp" && player.y > 0) player.y -= player.speed;
-            if (e.key === "ArrowDown" && player.y < canvas.height - player.size) player.y += player.speed;
-
-            if (e.key === "q") useAbility("limitless");
-            if (e.key === "w") useAbility("blue");
-            if (e.key === "e") useAbility("red");
-            if (e.key === "r") useAbility("purple");
-            if (e.key === "t") useAbility("void");
-        });
-
-        // Geração de inimigos
-        function generateEnemies() {
-            enemies.push({ x: canvas.width, y: Math.random() * (canvas.height - 30), size: 30, speed: level });
+// Função para iniciar habilidades aleatórias
+function assignRandomAbilities() {
+    assignedAbilities = [];
+    while (assignedAbilities.length < 5) {
+        const randomAbility = allAbilities[Math.floor(Math.random() * allAbilities.length)];
+        if (!assignedAbilities.includes(randomAbility)) {
+            assignedAbilities.push(randomAbility);
         }
+    }
+}
 
-        setInterval(() => {
-            if (gameRunning) generateEnemies();
-        }, 1000);
+// Jogador (Gojo)
+const player = {
+    x: gojoX,
+    y: gojoY,
+    width: 50,
+    height: 100,
+    color: '#00f',
+    velocityY: 0,
+    speed: playerSpeed,
+};
 
-        // Usar habilidade
-        function useAbility(ability) {
-            const now = Date.now();
-            if (now - abilities[ability].lastUsed < abilities[ability].cooldown) {
-                return;  // Se a habilidade estiver em cooldown
-            }
-            abilities[ability].lastUsed = now;
+// Função para desenhar o Gojo
+function drawPlayer() {
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+}
 
-            cursedTechnique = ability;  // Guarda qual habilidade foi usada
-            console.log(`Habilidade usada: ${ability}`);
-        }
+// Movimentação do Gojo
+function movePlayer() {
+    if (keys['ArrowLeft']) player.x -= player.speed;
+    if (keys['ArrowRight']) player.x += player.speed;
 
-        // Atualização do jogo
-        function update() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Pulo
+    if (keys['Space'] && !isJumping) {
+        player.velocityY = -jumpPower;
+        isJumping = true;
+    }
+    player.y += player.velocityY;
+    player.velocityY += gravity;
 
-            // Desenhar jogador (Gojo)
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.size, player.size);
+    // Impede o jogador de cair para fora da tela
+    if (player.y > canvas.height - player.height) {
+        player.y = canvas.height - player.height;
+        isJumping = false;
+        player.velocityY = 0;
+    }
+}
 
-            // Atualizar inimigos
-            ctx.fillStyle = "red";
-            enemies.forEach((enemy, index) => {
-                enemy.x -= enemy.speed;
-                ctx.fillRect(enemy.x, enemy.y, enemy.size, enemy.size);
+// Controle de teclas
+let keys = {};
+document.addEventListener('keydown', (event) => {
+    keys[event.key] = true;
+});
+document.addEventListener('keyup', (event) => {
+    keys[event.key] = false;
+});
 
-                // Colisão
-                if (enemy.x < player.x + player.size && enemy.x + enemy.size > player.x &&
-                    enemy.y < player.y + player.size && enemy.y + enemy.size > player.y) {
-                    alert("Game Over! Você chegou até a fase " + level);
-                    gameRunning = false;
-                }
+// Inimigos - Classe Básica
+class Enemy {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 50;
+        this.height = 50;
+        this.color = '#f00';
+        this.velocityX = 2;
+    }
 
-                // Remover inimigos fora da tela
-                if (enemy.x < -enemy.size) enemies.splice(index, 1);
+    move() {
+        this.x -= this.velocityX;
+    }
 
-                // Aplicar habilidades de Gojo nos inimigos
-                if (cursedTechnique === "limitless") {
-                    enemy.speed = Math.max(0.5, enemy.speed - 0.1);  // Inimigos desaceleram
-                }
-                if (cursedTechnique === "blue") {
-                    // Atração (simplificada)
-                    enemy.x += 2;
-                }
-                if (cursedTechnique === "red") {
-                    // Empurrar os inimigos para trás
-                    enemy.x -= 4;
-                }
-                if (cursedTechnique === "purple") {
-                    // Dano (destruição simples)
-                    enemies = [];
-                }
-                if (cursedTechnique === "void") {
-                    // Diminui a velocidade dos inimigos
-                    enemy.speed *= 0.5;
-                }
-            });
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+}
 
-            if (gameRunning) requestAnimationFrame(update);
-        }
+// Função para gerar inimigos
+function generateEnemies() {
+    if (Math.random() < 0.02) {
+        const enemyY = Math.random() * (canvas.height - 100);
+        enemies.push(new Enemy(canvas.width, enemyY));
+    }
+}
 
-        update();
+// Função para atualizar os inimigos
+function updateEnemies() {
+    for (let i = 0; i < enemies.length; i++) {
+        enemies[i].move();
+        enemies[i].draw();
+    }
+}
 
-        // Mudar de fase
-        function nextLevel() {
-            level++;
-            enemies = [];
-            alert("Fase " + level);
-        }
+// Geração de fases simples (plataformas)
+function drawPlatforms() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, canvas.height - 50, canvas.width, 50); // Plataforma do chão
+}
 
-        // Sistema de desenvolvedor
-        function enterDevMode() {
-            let password = prompt("Digite a senha de desenvolvedor:");
-            if (password === "ADM999") {
-                devMode = true;
-                document.getElementById("devPanel").style.display = "block";
-                alert("Modo Desenvolvedor Ativado!");
-            } else {
-                alert("Senha incorreta!");
-            }
-        }
+// Função de jogo principal
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpa a tela
+    drawPlatforms();
+    movePlayer();
+    drawPlayer();
+    updateEnemies();
+    generateEnemies();
 
-        // Ativar desenvolvedor ao pressionar D
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "d") enterDevMode();
-        });
-    </script>
-</body>
-</html>
+    // Se quiser mostrar habilidades aleatórias no jogo
+    ctx.fillStyle = '#000';
+    ctx.font = '20px Arial';
+    ctx.fillText('Habilidades: ' + assignedAbilities.join(', '), 10, 30);
+
+    requestAnimationFrame(gameLoop); // Chamando a função de forma recursiva
+}
+
+// Iniciar o jogo
+assignRandomAbilities(); // Atribuindo habilidades aleatórias
+gameLoop(); // Começar o loop do jogo
